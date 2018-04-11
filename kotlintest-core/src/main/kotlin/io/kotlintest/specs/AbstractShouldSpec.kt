@@ -10,7 +10,7 @@ import io.kotlintest.lineNumber
  * Example:
  *
  * "some test" {
- *   "with context" {
+ *   "with stateStack" {
  *      should("do something") {
  *        // test here
  *      }
@@ -29,7 +29,9 @@ abstract class AbstractShouldSpec(body: AbstractShouldSpec.() -> Unit = {}) : Ab
     body()
   }
 
-  final override fun isInstancePerTest(): Boolean = false
+  final override fun isInstancePerTest(): Boolean = true
+
+  private val stateStack = mutableListOf<() -> Unit>()
 
   fun should(name: String, test: TestContext.() -> Unit): TestCase {
     val tc = TestCase(rootDescription().append("should $name"), this@AbstractShouldSpec, test, lineNumber(), defaultTestCaseConfig)
@@ -37,16 +39,32 @@ abstract class AbstractShouldSpec(body: AbstractShouldSpec.() -> Unit = {}) : Ab
     return tc
   }
 
-  operator fun String.invoke(init: ShouldContext.() -> Unit) =
-      rootScopes.add(TestContainer(rootDescription().append(this), this@AbstractShouldSpec, { ShouldContext(it).init() }))
+  fun withContext(ctx: () -> Unit) {
+    println("Adding context to ${this@AbstractShouldSpec}")
+    stateStack.add(ctx)
+  }
 
-  inner class ShouldContext(val context: TestContext) {
+  operator fun String.invoke(init: ShouldContext.() -> Unit) =
+      rootScopes.add(TestContainer(rootDescription().append(this), this@AbstractShouldSpec, { ShouldContext(it, stateStack).init() }))
+
+  inner class ShouldContext(val context: TestContext, inheritedStateStack: List<() -> Unit> = listOf()) {
+
+    private val stateStack = inheritedStateStack.toMutableList()
+
+    fun withContext(ctx: () -> Unit) {
+      println("Adding context to ${this@ShouldContext}")
+      stateStack.add(ctx)
+    }
 
     operator fun String.invoke(init: ShouldContext.() -> Unit) =
         context.addScope(TestContainer(context.currentScope().description().append(this), this@AbstractShouldSpec, { ShouldContext(it).init() }))
 
     fun should(name: String, test: TestContext.() -> Unit): TestCase {
-      val tc = TestCase(context.currentScope().description().append("should $name"), this@AbstractShouldSpec, test, lineNumber(), defaultTestCaseConfig)
+      val testWrapper = { context: TestContext ->
+        stateStack.forEach { it() }
+        test(context)
+      }
+      val tc = TestCase(context.currentScope().description().append("should $name"), this@AbstractShouldSpec, testWrapper, lineNumber(), defaultTestCaseConfig)
       context.addScope(tc)
       return tc
     }
