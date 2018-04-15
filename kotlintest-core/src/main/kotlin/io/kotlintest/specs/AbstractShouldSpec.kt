@@ -34,7 +34,6 @@ abstract class AbstractShouldSpec(body: AbstractShouldSpec.() -> Unit = {}) : Ab
 
   final override fun isInstancePerTest(): Boolean = false
 
-//  private val stateStack = mutableListOf<() -> Unit>()
   private val stateStack = mutableListOf<WithContext>()
 
   fun should(name: String, test: TestContext.() -> Unit): TestCase {
@@ -43,12 +42,7 @@ abstract class AbstractShouldSpec(body: AbstractShouldSpec.() -> Unit = {}) : Ab
     return tc
   }
 
-//  fun withContext(name: String, ctx: () -> Unit) {
-//    println("Adding context $name to ${this@AbstractShouldSpec}")
-//    stateStack.add(ctx)
-//  }
-
-  fun withContext(ctx: WithContext) {
+  fun beforeEach(ctx: WithContext) {
     println("AbstractShouldSpec ${this@AbstractShouldSpec} adding withcontext ${ctx.name}")
     stateStack.add(ctx)
   }
@@ -59,7 +53,6 @@ abstract class AbstractShouldSpec(body: AbstractShouldSpec.() -> Unit = {}) : Ab
   }
 
 
-//  inner class ShouldContext(val context: TestContext, inheritedStateStack: List<() -> Unit> = listOf()) {
   inner class ShouldContext(val context: TestContext, inheritedStateStack: List<WithContext> = listOf()) {
 
     init {
@@ -69,19 +62,13 @@ abstract class AbstractShouldSpec(body: AbstractShouldSpec.() -> Unit = {}) : Ab
 
     private val stateStack = inheritedStateStack.toMutableList()
 
-//    fun withContext(ctx: () -> Unit) {
-    fun withContext(ctx: WithContext) {
+    fun beforeEach(ctx: WithContext) {
       println("ShouldContext ${this@ShouldContext} adding withcontext ${ctx.name}")
       stateStack.add(ctx)
     }
 
     operator fun String.invoke(init: ShouldContext.() -> Unit) {
-//      val testWrapper = { context: TestContext ->
-//        stateStack.forEach { it.ctx() }
-//        ShouldContext(context).init()
-//      }
       context.addScope(TestContainer(context.currentScope().description().append(this), this@AbstractShouldSpec, { ShouldContext(it, stateStack).init() }))
-      //context.addScope(TestContainer(context.currentScope().description().append(this), this@AbstractShouldSpec, testWrapper))
     }
 
 
