@@ -17,17 +17,17 @@ class ShouldSpecTest : AbstractShouldSpec() {
 
   init {
     "When you start with 0" {
-        beforeEach(WithContext("setting num to 0") {
+        beforeEach {
             num = 0
-        })
+        }
       "and add 10" {
-          beforeEach(WithContext("adding 10") {
+          beforeEach {
               num += 10
-          })
+          }
         "and then subtract 5" {
-            beforeEach(WithContext("subtracting 5") {
+            beforeEach {
                 num -= 5
-            })
+            }
             should("be equal to 5") {
               num shouldBe 5
             }
@@ -36,9 +36,9 @@ class ShouldSpecTest : AbstractShouldSpec() {
           num shouldBe 10
         }
         "and then add 5" {
-            beforeEach(WithContext("adding 5") {
+            beforeEach {
                 num += 5
-            })
+            }
           should("be equal to 15") {
             num shouldBe 15
           }
